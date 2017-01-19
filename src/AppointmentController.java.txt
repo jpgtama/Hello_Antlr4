@@ -1,0 +1,424 @@
+
+
+import java.io.IOException;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import net.sf.jasperreports.engine.JRException;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.philips.ichm.common.criteria.DynamicSearchCriteria;
+import com.philips.ichm.common.dto.ContactPersonDTO;
+import com.philips.ichm.common.dto.PatientDTO;
+import com.philips.ichm.common.entity.Contact;
+import com.philips.ichm.common.entity.ContactPerson;
+import com.philips.ichm.common.entity.Identity;
+import com.philips.ichm.common.entity.Patient;
+import com.philips.ichm.common.result.EntityResult;
+import com.philips.ichm.common.result.ListResult;
+import com.philips.ichm.common.result.Result;
+import com.philips.ichm.common.service.PatientService;
+import com.philips.ichm.core.exception.BusinessException;
+import com.philips.ichm.core.resource.service.LanguageResourceServcie;
+import com.philips.ichm.integration.dto.EncounterView;
+import com.philips.ichm.integration.dto.PatientView;
+import com.philips.ichm.logging.Logger;
+import com.philips.ichm.logging.impl.LogManager;
+import com.philips.ichm.organization.entity.Practitioner;
+import com.philips.ichm.report.service.JasperReportService;
+import com.philips.ichm.report.service.ReportDataService;
+import com.philips.ichm.scheduler.careplan.entity.CarePlan;
+import com.philips.ichm.scheduler.careplan.entity.RequestedFollowup;
+import com.philips.ichm.scheduler.common.dto.AppointmentDTO;
+import com.philips.ichm.scheduler.common.dto.RequestedFollowupDTO;
+import com.philips.ichm.scheduler.service.AppointmentService;
+import com.philips.ichm.scheduler.workday.exception.TimeslotOverCapacityException;
+import com.philips.ichm.security.annotation.Permission;
+import com.philips.ichm.security.exception.LackParameterException;
+import com.philips.ichm.workflow.entity.Appointment;
+import com.philips.ichm.workflow.entity.Calendar;
+import com.philips.ichm.workflow.entity.Encounter;
+import com.philips.ichm.workflow.entity.Order;
+import com.philips.ichm.workflow.entity.Timeslot;
+import com.philips.ichm.workflow.entity.TimeslotDef;
+import com.philips.ichm.workflow.service.EncounterService;
+
+/**
+ * AppointmentController
+ * 
+ * @author $Author: $
+ * @version $Revision: $
+ * @since $Date: $
+ */
+@RestController
+@RequestMapping("/scheduler/appointment")
+public class AppointmentController {
+	
+	/**
+	 * logger
+	 */
+	private Logger logger = LogManager.getLogger(AppointmentController.class);
+	
+	/**
+	 * appointmentService
+	 */
+	@Inject
+	@Named("appointmentService")
+	private AppointmentService appointmentService;
+	
+	/**
+	 * jasperReportService
+	 */
+	@Inject
+	@Named("jasperReportService")
+	private JasperReportService jasperReportService;
+	
+	/**
+	 * patientService //TODO
+	 */
+	@Inject
+	@Named("patientService")
+	private PatientService patientService;
+	
+	/**
+	 * encounterService //TODO
+	 */
+	@Inject
+	@Named("encounterService")
+	private EncounterService encounterService;
+	
+	/**
+	 * service
+	 */
+	@Inject
+	@Named("languageResourceService")
+	private LanguageResourceServcie languageResourceServcie;
+	
+	/**
+	 * extractExceptionMessage // TODO TBR using general handler
+	 * 
+	 * @param e
+	 * @return
+	 */
+	private String extractExceptionMessage(BusinessException e) {
+		String message = e.getMessage();
+		Object[] params = e.getParameters();
+		if (message != null && params != null) {
+			for (int i = 0; i < params.length; i++) {
+				String oldChar = "{" + i + "}";
+				String newChar = params[i].toString();
+				message = message.replace(oldChar, newChar);
+			}
+		}
+		return message;
+	}
+	
+	/**
+	 * loadAppointments
+	 * 
+	 * @param patientId
+	 * @return
+	 */
+	@RequestMapping(value = "/empty", method = { RequestMethod.GET, RequestMethod.POST })
+	public Result emptyAppointment() {
+		AppointmentDTO appointment = new AppointmentDTO();
+		appointment.setAppointment(new Appointment()); //
+		appointment.setCalendar(new Calendar());
+		appointment.setPractitioner(new Practitioner());
+		appointment.setTimeslot(new Timeslot());
+		appointment.setTimeslotDef(new TimeslotDef());
+		appointment.setRequestedFollowup(new RequestedFollowupDTO());
+		
+		RequestedFollowupDTO requestedFollowupDTO = appointment.getRequestedFollowup();
+		requestedFollowupDTO.setCarePlan(new CarePlan());
+		requestedFollowupDTO.setEncounter(new Encounter());
+		requestedFollowupDTO.setOrder(new Order());
+		requestedFollowupDTO.setPractitioner(new Practitioner());
+		requestedFollowupDTO.setRequestedFollowup(new RequestedFollowup());
+		requestedFollowupDTO.setPatient(new PatientDTO());
+		
+		PatientDTO patientDTO = requestedFollowupDTO.getPatient();
+		patientDTO.setIdCard(new Identity());
+		patientDTO.setSocialSecurity(new Identity());
+		patientDTO.setPatient(new Patient());
+		patientDTO.setFirstContactPerson(new ContactPersonDTO());
+		patientDTO.setSecondContactPerson(new ContactPersonDTO());
+		
+		patientDTO.getFirstContactPerson().setContact(new Contact());
+		patientDTO.getFirstContactPerson().setContactPerson(new ContactPerson());
+		patientDTO.getSecondContactPerson().setContact(new Contact());
+		patientDTO.getSecondContactPerson().setContactPerson(new ContactPerson());
+		
+		return new EntityResult().setItems(appointment);
+	}
+	
+	/**
+	 * loadAppointments
+	 * 
+	 * @param patientId
+	 * @return
+	 */
+	@RequestMapping(value = "/{patientId}", method = { RequestMethod.GET, RequestMethod.POST })
+	public Result loadAppointments(@PathVariable Long patientId) {
+		return loadAppointments(patientId, null, null);
+	}
+	
+	/**
+	 * loadAppointments
+	 * 
+	 * @param patientId
+	 * @param followupId
+	 * @return
+	 */
+	@RequestMapping(value = "/{patientId}/{followupId}", method = { RequestMethod.GET, RequestMethod.POST })
+	public Result loadAppointments(@PathVariable Long patientId, @PathVariable Long followupId) {
+		return loadAppointments(patientId, followupId, null);
+	}
+	
+	/**
+	 * loadAppointments
+	 * 
+	 * @param patientId
+	 * @param followupId
+	 * @param appointmentId
+	 * @return
+	 */
+	@RequestMapping(value = "/{patientId}/{followupId}/{appointmentId}", method = { RequestMethod.GET, RequestMethod.POST })
+	public Result loadAppointments(@PathVariable Long patientId, @PathVariable Long followupId, @PathVariable Long appointmentId) {
+		ListResult listResult = new ListResult();
+		try {
+			List<AppointmentDTO> appointments = appointmentService.findAppointmentList(patientId, followupId, appointmentId);
+			listResult.setItems(appointments);
+		} catch (Exception e) { // TODO TBR using general handler
+			logger.info(e);
+			listResult.setCode(3);
+			listResult.setMessage(e.getMessage());
+		}
+		return listResult;
+	}
+	
+	/**
+	 * saveAppointment
+	 * 
+	 * @param appointments
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(method = RequestMethod.POST)
+	@Permission("scheduler_manage_followup")
+	public Result saveAppointments(@RequestBody List<AppointmentDTO> appointments) throws Exception {
+		ListResult result = new ListResult();
+		try {
+			List<Long> idList = appointmentService.createAppointment(appointments);
+			result.setItems(idList);
+		} catch (TimeslotOverCapacityException e) { // TODO TBR using general handler
+			logger.info(e);
+			// TODO
+			result.setCode(e.getCode());
+			result.setMessage(e.getMessage());
+		} catch (BusinessException e) {// TODO TBR using general handler
+			logger.info(e);
+			result.setCode(1);
+			result.setMessage(extractExceptionMessage(e));
+		} catch (Exception e) { // TODO TBR using general handler
+			logger.info(e);
+			result.setCode(-1);
+			result.setMessage(e.getMessage());
+		}
+		return result;
+	}
+	
+	/**
+	 * updateAppointment
+	 * 
+	 * @param followupAppointmentDTO
+	 * @return
+	 */
+	@RequestMapping(method = RequestMethod.PUT)
+	@Permission("scheduler_manage_followup")
+	public Result updateAppointment(@RequestBody AppointmentDTO appointment) {
+		ListResult result = new ListResult();
+		try {
+			Long appointmentId = appointmentService.saveOrUpdateAppointment(appointment);
+			List<Long> idList = new ArrayList<>();
+			idList.add(appointmentId);
+			result.setItems(idList);
+		} catch (TimeslotOverCapacityException e) {// TODO TBR using general handler
+			logger.info(e);
+			// TODO
+			result.setCode(302);
+		} catch (BusinessException e) {// TODO TBR using general handler
+			logger.info(e);
+			result.setCode(1);
+			result.setMessage(extractExceptionMessage(e));
+		} catch (Exception e) { // TODO TBR using general handler
+			logger.info(e);
+			result.setCode(-1);
+			result.setMessage(e.getMessage());
+		}
+		return result;
+	}
+	
+	/**
+	 * update appointment status
+	 * 
+	 * @param pRequestMap
+	 * @return
+	 */
+	@RequestMapping(value = "/status/{appointmentId}", method = RequestMethod.PUT)
+	@Permission("scheduler_manage_followup")
+	public Result updateAppointmentStatus(@PathVariable("appointmentId") Long appointmentId, @RequestBody Map<String, String> requestParams) {
+		Result result = new Result();
+		String status = requestParams.get("status");
+		
+		if (StringUtils.isBlank(status)) {
+			throw new LackParameterException("status is not found.");
+		}
+		
+		try {
+			appointmentService.updateAppointmentStatus(appointmentId, status);
+		} catch (LackParameterException e) {
+			logger.info(e); // TODO
+			result.setCode(999);
+		} catch (Exception e) { // TODO TBR using general handler
+			logger.info(e);
+			result.setCode(-1);
+			result.setMessage(e.getMessage());
+		}
+		return result;
+	}
+	
+	/**
+	 * getPdfReport
+	 * 
+	 * 
+	 * @param printSerialNumber
+	 *            used to mark print file name, it can be time like: 20151012091130
+	 * @param appointmentIdArray
+	 * @param locale
+	 * @return
+	 * @throws IOException
+	 * @throws JRException
+	 */
+	@RequestMapping(value = "/print/{printSerialNumber}", method = { RequestMethod.GET, RequestMethod.POST }, produces = "application/pdf;charset=utf-8")
+	@Permission("scheduler_print_followup_app")
+	public byte[] getPdfReport(@PathVariable("printSerialNumber") String printSerialNumber, @RequestParam("appointmentId") Long[] appointmentIdArray,
+			Locale locale) throws IOException, JRException {
+		Map<String, Object> parameters = new HashMap<String, Object>();
+		// Environment Parameters
+		parameters.put(JasperReportService.JSON_LOCALE, locale);
+		parameters.put(JasperReportService.REPORT_LOCALE, locale);
+		// Business Parameters
+		parameters.put(ReportDataService.KEY_DATA_ITEM_OID, appointmentIdArray);
+		String module = "appointment";
+		return jasperReportService.getPdfReport(module, parameters);
+	}
+	
+	/**
+	 * printMyList
+	 * 
+	 * @param gridName
+	 * @param printSerialNumber
+	 * @param dynamicSearchCriteria
+	 * @param locale
+	 * @return
+	 * @throws IOException
+	 * @throws JRException
+	 * @throws ParseException
+	 */
+	@RequestMapping(value = "/printmylist/{printSerialNumber}", method = { RequestMethod.GET, RequestMethod.POST }, produces = "application/pdf;charset=utf-8")
+	@Permission("scheduler_print_followup_app_list")
+	public byte[] printMyList(@PathVariable("printSerialNumber") String printSerialNumber, @RequestParam("searchType") String searchType,
+			@RequestParam(value = "searchName", required = false) String searchName, @RequestParam(value = "junction", required = false) String junction,
+			@RequestParam("search") String search, @RequestParam("searchDisplay") String searchDisplay, @RequestParam("sort") String sort, Locale locale)
+			throws IOException, JRException, ParseException {
+		Map<String, Object> parameters = new HashMap<String, Object>();
+		
+		// Environment Parameters
+		parameters.put(JasperReportService.JSON_LOCALE, locale);
+		parameters.put(JasperReportService.REPORT_LOCALE, locale);
+		
+		// Business Parameters
+		parameters.put("searchType", searchType);
+		parameters.put("searchName", searchName);
+		parameters.put("searchDisplay", searchDisplay);
+		
+		// set dynamicSearchCriteria
+		DynamicSearchCriteria dynamicSearchCriteria = new DynamicSearchCriteria();
+		dynamicSearchCriteria.setJunction(junction);
+		dynamicSearchCriteria.setSearch(search);
+		dynamicSearchCriteria.setSort(sort);
+		parameters.put(ReportDataService.KEY_DATA_ITEM_OID, dynamicSearchCriteria);
+		
+		// module
+		String module = "appointmentList";
+		
+		// get pdf report
+		byte[] result = jasperReportService.getPdfReport(module, parameters);
+		
+		return result;
+	}
+	
+	/**
+	 * queryPatientView
+	 * 
+	 * @param patient
+	 * @return
+	 * @throws IOException
+	 */
+	@RequestMapping(value = "/query/paitentsync", method = RequestMethod.POST)
+	public Result queryPatientView(@RequestBody PatientView patientView) throws IOException {
+		// call service
+		List<PatientView> patientViewList = patientService.fetchPatientViewList(patientView);
+		
+		// generate result object
+		return new ListResult().setNumRows(patientViewList.size()).setItems(patientViewList);
+	}
+	
+	/**
+	 * queryEncounterView
+	 * 
+	 * @param encounter
+	 * @return
+	 * @throws IOException
+	 */
+	@RequestMapping(value = "/query/encountersync", method = RequestMethod.POST)
+	public Result queryEncounterView(@RequestBody PatientView patientView) throws IOException {
+		// call service
+		List<EncounterView> encounterViewList = encounterService.fetchEncounterViewList(patientView);
+		
+		// generate result object
+		return new ListResult().setNumRows(encounterViewList.size()).setItems(encounterViewList);
+	}
+	
+	/**
+	 * getRecommendPractitioner
+	 * 
+	 * @param carePlanId
+	 * @return
+	 * @throws IOException
+	 */
+	@RequestMapping(value = "/practitioner/careplan/{carePlanId}", method = { RequestMethod.GET, RequestMethod.POST })
+	public Result getRecommendPractitioner(@PathVariable Long carePlanId) throws IOException {
+		// call service
+		Long practitionerId = appointmentService.getRecommendPractitioner(carePlanId);
+		
+		// generate result object
+		return new EntityResult().setItems(practitionerId);
+	}
+	
+}
