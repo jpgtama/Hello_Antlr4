@@ -48,6 +48,7 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import ut_helper.domain.FieldInfoHolder;
 import ut_helper.domain.MethodInfoHolder;
 import ut_helper.domain.ModifierInfoHolder;
+import ut_helper.domain.ParameterInfoHolder;
 
 /**
  * UT_Java_Visitor
@@ -58,7 +59,7 @@ import ut_helper.domain.ModifierInfoHolder;
  */
 public class UT_Java_Visitor extends JavaBaseVisitor<UT_InfoHolder> {
 	
-	private void extractModifiers(ModifierInfoHolder modifierInfoHolder, List<ModifierContext> modifierContexts) {
+	private void parse_modifier(ModifierInfoHolder modifierInfoHolder, List<ModifierContext> modifierContexts) {
 		
 		for (ModifierContext modifierContext : modifierContexts) {
 			ClassOrInterfaceModifierContext classOrInterfaceModifierContext = modifierContext.classOrInterfaceModifier();
@@ -150,7 +151,7 @@ public class UT_Java_Visitor extends JavaBaseVisitor<UT_InfoHolder> {
 	private void handleField(List<ModifierContext> modifierContexts, FieldDeclarationContext fieldDeclarationContext) {
 		FieldInfoHolder fieldInfoHolder = new FieldInfoHolder();
 		// modifier
-		extractModifiers(fieldInfoHolder.getModifierInfoHolder(), modifierContexts);
+		parse_modifier(fieldInfoHolder.getModifierInfoHolder(), modifierContexts);
 		
 		// type & field name
 		extractFieldInfo(fieldInfoHolder, fieldDeclarationContext);
@@ -178,50 +179,72 @@ public class UT_Java_Visitor extends JavaBaseVisitor<UT_InfoHolder> {
 		MethodInfoHolder methodInfoHolder = new MethodInfoHolder();
 		
 		// modifier
-		extractModifiers(methodInfoHolder.getModifierInfoHolder(), modifierContexts);
+		parse_modifier(methodInfoHolder.getModifierInfoHolder(), modifierContexts);
 		
 		// return type & method name & parameters
-		extractMethodInfo(methodInfoHolder, methodDeclarationContext);
+		parse_methodDeclaration(methodInfoHolder, methodDeclarationContext);
+		
+		System.out.println(methodInfoHolder);
 	}
 	
-	private void extractMethodInfo(MethodInfoHolder methodInfoHolder, MethodDeclarationContext methodDeclarationContext) {
-		// TODO Auto-generated method stub
+	private void parse_methodDeclaration(MethodInfoHolder methodInfoHolder, MethodDeclarationContext methodDeclarationContext) {
+		// (typeType|'void') Identifier formalParameters ('[' ']')* ('throws' qualifiedNameList)? ( methodBody | ';' )
 		
 		String typeName = parse_typeType(methodDeclarationContext.typeType());
 		if (typeName == null) {
 			typeName = "void";
 		}
 		
+		methodInfoHolder.setReturnType(typeName);
+		
 		String methodName = methodDeclarationContext.Identifier().getText();
+		methodInfoHolder.setMethodName(methodName);
+		
+		parse_formalParameters(methodInfoHolder.getParameterInfoHolders(), methodDeclarationContext.formalParameters());
 		
 	}
 	
-	private void parse_formalParameters(FormalParametersContext formalParametersContext) {
+	private void parse_formalParameters(List<ParameterInfoHolder> parameterInfoHolders, FormalParametersContext formalParametersContext) {
 		FormalParameterListContext formalParameterListContext = formalParametersContext.formalParameterList();
 		
-		List<FormalParameterContext> formalParameterContexts = formalParameterListContext.formalParameter();
-		LastFormalParameterContext lastFormalParameterContext = formalParameterListContext.lastFormalParameter();
-		
-		if (formalParameterContexts != null && formalParameterContexts.size() > 0) {
-			for (FormalParameterContext formalParameterContext : formalParameterContexts) {
-				// variableModifier* typeType variableDeclaratorId
+		if (formalParameterListContext != null) {
+			List<FormalParameterContext> formalParameterContexts = formalParameterListContext.formalParameter();
+			LastFormalParameterContext lastFormalParameterContext = formalParameterListContext.lastFormalParameter();
+			
+			if (formalParameterContexts != null && formalParameterContexts.size() > 0) {
+				for (FormalParameterContext formalParameterContext : formalParameterContexts) {
+					// variableModifier* typeType variableDeclaratorId
+					// TODO test to output
+					ParameterInfoHolder parameterInfoHolder = new ParameterInfoHolder();
+					for (VariableModifierContext variableModifierContext : formalParameterContext.variableModifier()) {
+						parse_variableModifier(parameterInfoHolder.getModifierInfoHolder(), variableModifierContext);
+					}
+					
+					String typeName = parse_typeType(formalParameterContext.typeType());
+					parameterInfoHolder.setType(typeName);
+					
+					String variableName = parse_variableDeclaratorId(formalParameterContext.variableDeclaratorId());
+					parameterInfoHolder.setVariableName(variableName);
+					
+					parameterInfoHolders.add(parameterInfoHolder);
+				}
 			}
+		} else {
+			System.err.println("formalParameterListContext is null");
 		}
 		
 	}
 	
-	private String parse_variableModifier(VariableModifierContext variableModifierContext) {
-		String modifier = null;
+	private void parse_variableModifier(ModifierInfoHolder modifierInfoHolder, VariableModifierContext variableModifierContext) {
 		// 'final' | annotation
 		String annotationName = parse_annotation(variableModifierContext.annotation());
 		
 		if (annotationName == null) {
-			modifier = "final";
+			modifierInfoHolder.setAccess("final");
 		} else {
-			modifier = annotationName;
+			modifierInfoHolder.addAnnotationName(annotationName);
 		}
 		
-		return modifier;
 	}
 	
 	private String parse_annotation(AnnotationContext annotationContext) {

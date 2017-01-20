@@ -58,7 +58,26 @@ public class ModifierInfoHolder {
 	
 	@Override
 	public String toString() {
-		String modifier = annotationNames.size() > 0 ? "@" + annotationNames.toString() + " " + access : access;
+		String modifier = formatAnnotaionName() + " " + formatAccess();
 		return modifier;
+	}
+	
+	private String formatAccess() {
+		return access != null ? access : "";
+	}
+	
+	private String formatAnnotaionName() {
+		if (annotationNames.size() == 0) {
+			return "";
+		} else if (annotationNames.size() == 1) {
+			return "@" + annotationNames.get(0);
+		} else {
+			List<String> rets = new ArrayList<>();
+			annotationNames.forEach(n -> {
+				rets.add("@" + n);
+			});
+			return rets.toString();
+		}
+		
 	}
 }
