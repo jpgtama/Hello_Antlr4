@@ -23,24 +23,41 @@ import java.util.List;
 import java_code_looper.JavaBaseVisitor;
 import java_code_looper.JavaParser.AnnotationContext;
 import java_code_looper.JavaParser.AnnotationNameContext;
+import java_code_looper.JavaParser.ArgumentsContext;
+import java_code_looper.JavaParser.ArrayInitializerContext;
+import java_code_looper.JavaParser.BlockContext;
+import java_code_looper.JavaParser.BlockStatementContext;
 import java_code_looper.JavaParser.ClassBodyDeclarationContext;
 import java_code_looper.JavaParser.ClassOrInterfaceModifierContext;
 import java_code_looper.JavaParser.ClassOrInterfaceTypeContext;
+import java_code_looper.JavaParser.ExplicitGenericInvocationSuffixContext;
+import java_code_looper.JavaParser.ExpressionContext;
 import java_code_looper.JavaParser.FieldDeclarationContext;
 import java_code_looper.JavaParser.FormalParameterContext;
 import java_code_looper.JavaParser.FormalParameterListContext;
 import java_code_looper.JavaParser.FormalParametersContext;
 import java_code_looper.JavaParser.LastFormalParameterContext;
+import java_code_looper.JavaParser.LiteralContext;
+import java_code_looper.JavaParser.LocalVariableDeclarationContext;
+import java_code_looper.JavaParser.LocalVariableDeclarationStatementContext;
 import java_code_looper.JavaParser.MemberDeclarationContext;
 import java_code_looper.JavaParser.MethodDeclarationContext;
 import java_code_looper.JavaParser.ModifierContext;
+import java_code_looper.JavaParser.NonWildcardTypeArgumentsContext;
+import java_code_looper.JavaParser.PrimaryContext;
 import java_code_looper.JavaParser.PrimitiveTypeContext;
 import java_code_looper.JavaParser.QualifiedNameContext;
+import java_code_looper.JavaParser.StatementContext;
+import java_code_looper.JavaParser.SuperSuffixContext;
+import java_code_looper.JavaParser.TypeArgumentContext;
 import java_code_looper.JavaParser.TypeArgumentsContext;
+import java_code_looper.JavaParser.TypeDeclarationContext;
+import java_code_looper.JavaParser.TypeListContext;
 import java_code_looper.JavaParser.TypeTypeContext;
 import java_code_looper.JavaParser.VariableDeclaratorContext;
 import java_code_looper.JavaParser.VariableDeclaratorIdContext;
 import java_code_looper.JavaParser.VariableDeclaratorsContext;
+import java_code_looper.JavaParser.VariableInitializerContext;
 import java_code_looper.JavaParser.VariableModifierContext;
 
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -128,24 +145,213 @@ public class UT_Java_Visitor extends JavaBaseVisitor<UT_InfoHolder> {
 		return fieldNames;
 	}
 	
+	private void parse_variableDeclarator(VariableDeclaratorContext variableDeclaratorContext) {
+		// variableDeclaratorId ('=' variableInitializer)?
+		VariableDeclaratorIdContext variableDeclaratorIdContext = variableDeclaratorContext.variableDeclaratorId();
+		String varaiableName = variableDeclaratorIdContext.Identifier().getText();
+		
+		VariableInitializerContext variableInitializerContext = variableDeclaratorContext.variableInitializer();
+		if (variableInitializerContext != null) {
+			parse_variableInitializer(variableInitializerContext);
+		}
+		
+	}
+	
+	private void parse_variableInitializer(VariableInitializerContext variableInitializerContext) {
+		// arrayInitializer | expression
+		ArrayInitializerContext arrayInitializerContext = variableInitializerContext.arrayInitializer();
+		ExpressionContext expressionContext = variableInitializerContext.expression();
+		
+		if (arrayInitializerContext != null) {
+			parse_arrayInitializer(arrayInitializerContext);
+		} else {
+			parse_expression(expressionContext);
+		}
+		
+	}
+	
+	private void parse_expression(ExpressionContext expressionContext) {
+		// TODO Auto-generated method stub
+		
+		PrimaryContext primaryContext = expressionContext.primary();
+		
+		if (primaryContext != null) {
+			parse_primary(primaryContext);
+		}
+		
+	}
+	
+	private void parse_primary(PrimaryContext primaryContext) {
+		// TODO Auto-generated method stub
+		ExpressionContext expressionContext = primaryContext.expression();
+		
+		if (expressionContext != null) {
+			// TODO
+			parse_expression(expressionContext);
+		} else if (primaryContext.literal() != null) {
+			parse_literal(primaryContext.literal());
+		} else if (primaryContext.Identifier() != null) {
+			System.out.println(primaryContext.Identifier().getText());
+		} else if (primaryContext.typeType() != null) {
+			String typeName = parse_typeType(primaryContext.typeType());
+			System.out.println(typeName + "." + ".class");
+		} else if (primaryContext.nonWildcardTypeArguments() != null) {
+			// nonWildcardTypeArguments (explicitGenericInvocationSuffix | 'this' arguments)
+			parse_nonWildcardTypeArguments(primaryContext.nonWildcardTypeArguments());
+			
+			if (primaryContext.explicitGenericInvocationSuffix() != null) {
+				parse_explicitGenericInvocationSuffix(primaryContext.explicitGenericInvocationSuffix());
+			} else {
+				parse_arguments(primaryContext.arguments());
+			}
+			
+		} else if (primaryContext.getChildCount() == 3) {
+			System.out.println("void.class");
+			
+		} else if (primaryContext.getChildCount() == 1) {
+			System.out.println(primaryContext.getChild(0).getText());
+		}
+		
+	}
+	
+	private void parse_nonWildcardTypeArguments(NonWildcardTypeArgumentsContext nonWildcardTypeArguments) {
+		// '<' typeList '>'
+		TypeListContext typeListContext = nonWildcardTypeArguments.typeList();
+		parse_typeList(typeListContext);
+		
+	}
+	
+	private void parse_typeList(TypeListContext typeListContext) {
+		// typeType (',' typeType)*
+		for (TypeTypeContext typeTypeContext : typeListContext.typeType()) {
+			parse_typeType(typeTypeContext);
+		}
+	}
+	
+	private void parse_explicitGenericInvocationSuffix(ExplicitGenericInvocationSuffixContext explicitGenericInvocationSuffix) {
+		// TODO 'super' superSuffix | Identifier arguments
+		if (explicitGenericInvocationSuffix.superSuffix() != null) {
+			parse_superSuffix(explicitGenericInvocationSuffix.superSuffix());
+		} else {
+			System.out.println(explicitGenericInvocationSuffix.Identifier().getText());
+			parse_arguments(explicitGenericInvocationSuffix.arguments());
+		}
+	}
+	
+	private void parse_superSuffix(SuperSuffixContext superSuffix) {
+		// arguments | '.' Identifier arguments?
+		if (superSuffix.Identifier() != null) {
+			System.out.println(superSuffix.Identifier().getText());
+			if (superSuffix.arguments() != null) {
+				parse_arguments(superSuffix.arguments());
+			}
+		} else {
+			parse_arguments(superSuffix.arguments());
+		}
+	}
+	
+	private void parse_arguments(ArgumentsContext arguments) {
+		// TODO '(' expressionList? ')'
+		
+	}
+	
+	private void parse_literal(LiteralContext literalContext) {
+		// TODO Auto-generated method stub
+		if (literalContext.IntegerLiteral() != null) {
+			System.out.println(literalContext.IntegerLiteral().getText());
+			
+		} else if (literalContext.FloatingPointLiteral() != null) {
+			System.out.println(literalContext.FloatingPointLiteral().getText());
+		} else if (literalContext.CharacterLiteral() != null) {
+			System.out.println(literalContext.CharacterLiteral().getText());
+			
+		} else if (literalContext.StringLiteral() != null) {
+			System.out.println(literalContext.StringLiteral().getText());
+			
+		} else if (literalContext.BooleanLiteral() != null) {
+			System.out.println(literalContext.BooleanLiteral().getText());
+			
+		} else {
+			System.out.println("null");
+		}
+	}
+	
+	private void parse_arrayInitializer(ArrayInitializerContext arrayInitializerContext) {
+		// '{' (variableInitializer (',' variableInitializer)* (',')? )? '}'
+		
+		List<VariableInitializerContext> variableInitializerContexts = arrayInitializerContext.variableInitializer();
+		
+		if (variableInitializerContexts != null) {
+			for (VariableInitializerContext variableInitializerContext : variableInitializerContexts) {
+				// TODO
+				parse_variableInitializer(variableInitializerContext);
+			}
+		}
+		
+	}
+	
 	private String parse_typeType(TypeTypeContext typeTypeContext) {
 		ClassOrInterfaceTypeContext classOrInterfaceTypeContext = typeTypeContext.classOrInterfaceType();
 		PrimitiveTypeContext primitiveTypeContext = typeTypeContext.primitiveType();
 		String typeName = null;
 		if (classOrInterfaceTypeContext != null) {
-			// type name
-			typeName = classOrInterfaceTypeContext.Identifier().get(0).toString();
 			
-			List<TypeArgumentsContext> typeArgumentsContexts = classOrInterfaceTypeContext.typeArguments();
-			if (typeArgumentsContexts.size() > 0) {
-				System.err.println("classOrInterfaceTypeContext.typeArguments() size > 0: " + classOrInterfaceTypeContext.typeArguments());
+			List<String> names = new ArrayList<>();
+			
+			for (int i = 0; i < classOrInterfaceTypeContext.Identifier().size(); i++) {
+				// type name
+				typeName = classOrInterfaceTypeContext.Identifier(i).getText();
+				
+				String typeArgs = parse_typeArguments(classOrInterfaceTypeContext.typeArguments(i));
+				if (typeArgs != null) {
+					typeName += typeArgs;
+				}
+				names.add(typeName);
 			}
+			
+			return String.join(".", names.toArray(new String[] {}));
 			
 		} else {
 			typeName = primitiveTypeContext.getText();
+			return typeName;
 		}
 		
-		return typeName;
+	}
+	
+	private String parse_typeArguments(TypeArgumentsContext typeArgumentsContext) {
+		// '<' typeArgument (',' typeArgument)* '>'
+		if (typeArgumentsContext != null) {
+			List<TypeArgumentContext> typeArgumentContexts = typeArgumentsContext.typeArgument();
+			
+			if (typeArgumentContexts.size() > 0) {
+				List<String> typeArgs = new ArrayList<>();
+				for (TypeArgumentContext typeArgumentContext : typeArgumentContexts) {
+					String typeArgument = parse_typeArgument(typeArgumentContext);
+					typeArgs.add(typeArgument);
+				}
+				return typeArgs.toString().replace("[", "<").replace("]", ">");
+			} else {
+				return null;
+			}
+			
+		} else {
+			return null;
+		}
+		
+	}
+	
+	private String parse_typeArgument(TypeArgumentContext typeArgumentContext) {
+		// typeType | '?' (('extends' | 'super') typeType)?
+		String typeName = parse_typeType(typeArgumentContext.typeType());
+		
+		if (typeArgumentContext.getChildCount() == 1) {
+			return typeName;
+			
+		} else {
+			String wildcardBound = "? " + typeArgumentContext.getChild(1).getText() + " " + typeName;
+			return wildcardBound;
+		}
+		
 	}
 	
 	private void handleField(List<ModifierContext> modifierContexts, FieldDeclarationContext fieldDeclarationContext) {
@@ -190,17 +396,75 @@ public class UT_Java_Visitor extends JavaBaseVisitor<UT_InfoHolder> {
 	private void parse_methodDeclaration(MethodInfoHolder methodInfoHolder, MethodDeclarationContext methodDeclarationContext) {
 		// (typeType|'void') Identifier formalParameters ('[' ']')* ('throws' qualifiedNameList)? ( methodBody | ';' )
 		
+		// return type
 		String typeName = parse_typeType(methodDeclarationContext.typeType());
 		if (typeName == null) {
 			typeName = "void";
 		}
-		
 		methodInfoHolder.setReturnType(typeName);
 		
+		// method name
 		String methodName = methodDeclarationContext.Identifier().getText();
 		methodInfoHolder.setMethodName(methodName);
 		
+		// parameter
 		parse_formalParameters(methodInfoHolder.getParameterInfoHolders(), methodDeclarationContext.formalParameters());
+		
+		// method body
+		parse_block(methodDeclarationContext.methodBody().block());
+		
+	}
+	
+	private void parse_block(BlockContext blockContext) {
+		List<BlockStatementContext> blockStatementContexts = blockContext.blockStatement();
+		
+		for (BlockStatementContext blockStatementContext : blockStatementContexts) {
+			parse_blockStatement(blockStatementContext);
+		}
+		
+	}
+	
+	private void parse_blockStatement(BlockStatementContext blockStatementContext) {
+		// localVariableDeclarationStatement | statement | typeDeclaration
+		parse_localVariableDeclarationStatement(blockStatementContext.localVariableDeclarationStatement());
+		
+		parse_statement(blockStatementContext.statement());
+		
+		parse_typeDeclaration(blockStatementContext.typeDeclaration());
+		
+	}
+	
+	private void parse_typeDeclaration(TypeDeclarationContext typeDeclaration) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	private void parse_statement(StatementContext statement) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	private void parse_localVariableDeclarationStatement(LocalVariableDeclarationStatementContext localVariableDeclarationStatement) {
+		// localVariableDeclaration ';'
+		if (localVariableDeclarationStatement != null) {
+			parse_localVariableDeclaration(localVariableDeclarationStatement.localVariableDeclaration());
+		}
+		
+	}
+	
+	private void parse_localVariableDeclaration(LocalVariableDeclarationContext localVariableDeclaration) {
+		// variableModifier* typeType variableDeclarators
+		ModifierInfoHolder modifierInfoHolder = new ModifierInfoHolder();
+		
+		for (VariableModifierContext variableModifierContext : localVariableDeclaration.variableModifier()) {
+			parse_variableModifier(modifierInfoHolder, variableModifierContext);
+		}
+		
+		String typeName = parse_typeType(localVariableDeclaration.typeType());
+		
+		List<String> variableNames = parse_variableDeclarators(localVariableDeclaration.variableDeclarators());
+		
+		System.out.println("================== localVariableDeclaration: " + modifierInfoHolder.toString() + " " + typeName + " " + variableNames.toString());
 		
 	}
 	
@@ -229,8 +493,6 @@ public class UT_Java_Visitor extends JavaBaseVisitor<UT_InfoHolder> {
 					parameterInfoHolders.add(parameterInfoHolder);
 				}
 			}
-		} else {
-			System.err.println("formalParameterListContext is null");
 		}
 		
 	}
