@@ -17,9 +17,10 @@
  ***************************************************************************/
 package ut_helper;
 
-import java.io.File;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.file.Files;
+import java.io.InputStreamReader;
+import java.util.stream.Collectors;
 
 import java_code_looper.JavaLexer;
 import java_code_looper.JavaParser;
@@ -40,13 +41,16 @@ public class UT_Helper {
 	
 	public static void main(String[] args) throws IOException {
 		// C:/source_code/ichm-clean/app/scheduler/controller/src/main/java/com/philips/ichm/scheduler/appointment/AppointmentController.java
+		// String filePath =
+		// "C:/source_code/ichm-clean/app/scheduler/controller/src/main/java/com/philips/ichm/scheduler/appointment/AppointmentController.java";
+		// String fileContent = new String(Files.readAllBytes(new File(filePath).toPath()));
 		
-		String filePath = "C:/source_code/ichm-clean/app/scheduler/controller/src/main/java/com/philips/ichm/scheduler/appointment/AppointmentController.java";
-		String fileConent = new String(Files.readAllBytes(new File(filePath).toPath()));
+		String fileContent = new BufferedReader(new InputStreamReader(UT_Helper.class.getResourceAsStream("/AppointmentController.java.txt"))).lines().collect(
+				Collectors.joining("\n"));
 		
-		// System.out.println(fileConent);
+		// System.out.println(fileContent);
 		
-		CharStream charStream = new ANTLRInputStream(fileConent);
+		CharStream charStream = new ANTLRInputStream(fileContent);
 		
 		JavaLexer lexer = new JavaLexer(charStream);
 		
