@@ -42,7 +42,7 @@ public class UT_Helper {
 	public static void main(String[] args) throws IOException {
 		// C:/source_code/ichm-clean/app/scheduler/controller/src/main/java/com/philips/ichm/scheduler/appointment/AppointmentController.java
 		// String filePath =
-		// "C:/source_code/ichm-clean/app/scheduler/controller/src/main/java/com/philips/ichm/scheduler/appointment/AppointmentController.java";
+		// "C:/source_code/ichm-clean/app/scheduler/service/src/main/java/com/philips/ichm/scheduler/service/impl/AppointmentServiceImpl.java";
 		// String fileContent = new String(Files.readAllBytes(new File(filePath).toPath()));
 		
 		String fileContent = new BufferedReader(new InputStreamReader(UT_Helper.class.getResourceAsStream("/AppointmentController.java.txt"))).lines().collect(
@@ -58,8 +58,10 @@ public class UT_Helper {
 		
 		JavaParser parser = new JavaParser(tokens);
 		
-		UT_Java_Visitor visitor = new UT_Java_Visitor();
-		visitor.visit(parser.compilationUnit());
+		// UT_Java_Visitor visitor = new UT_Java_Visitor();
+		// visitor.visit(parser.compilationUnit());
+		UT_Java_Visitor2 visitor2 = new UT_Java_Visitor2();
+		visitor2.visit(parser.compilationUnit());
 		
 	}
 }
