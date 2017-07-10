@@ -68,357 +68,248 @@ import com.philips.ichm.workflow.service.EncounterService;
 @RequestMapping("/scheduler/appointment")
 public class AppointmentController {
 	
-	/**
-	 * logger
-	 */
-	private Logger logger = LogManager.getLogger(AppointmentController.class);
+	private String msgStorePath;
 	
-	/**
-	 * appointmentService
-	 */
-	@Inject
-	@Named("appointmentService")
-	private AppointmentService appointmentService;
+	private int msgStoreDays;
 	
-	/**
-	 * jasperReportService
-	 */
-	@Inject
-	@Named("jasperReportService")
-	private JasperReportService jasperReportService;
+	private MessageType msgType;
 	
-	/**
-	 * patientService //TODO
-	 */
-	@Inject
-	@Named("patientService")
-	private PatientService patientService;
+	private int retryDelay;
 	
-	/**
-	 * encounterService //TODO
-	 */
-	@Inject
-	@Named("encounterService")
-	private EncounterService encounterService;
+	private int retryTimes;
 	
-	/**
-	 * service
-	 */
-	@Inject
-	@Named("languageResourceService")
-	private LanguageResourceServcie languageResourceServcie;
+	private int retryInterval;
 	
-	/**
-	 * extractExceptionMessage // TODO TBR using general handler
-	 * 
-	 * @param e
-	 * @return
-	 */
-	private String extractExceptionMessage(BusinessException e) {
-		String message = e.getMessage();
-		Object[] params = e.getParameters();
-		if (message != null && params != null) {
-			for (int i = 0; i < params.length; i++) {
-				String oldChar = "{" + i + "}";
-				String newChar = params[i].toString();
-				message = message.replace(oldChar, newChar);
-			}
-		}
-		return message;
+	private boolean isAsync;
+	
+	private boolean isBlock;
+	
+	private String msgSendUrl;
+	
+	private String msgSendClass;
+	
+	private String msgSendMethod;
+	
+	private String msgSendDir;
+	
+	private String msgScanDir;
+	
+	private CallbackType callbackType;
+	
+	private String callbackUrl;
+	
+	private String callbackHost;
+	
+	private String callbackPort;
+	
+	private String callbackContextPath;
+	
+	private String callbackServletPath;
+	
+	private String callbackService;
+	
+	private String callbackClass;
+	
+	private String callbackUnmarshalClass;
+	
+	private String callbackMethod;
+	
+	private String callbackBrokerUrl;
+	
+	private String callbackQueue;
+	
+	private boolean callbackReturnResult;
+	
+	public String getMsgSendClass() {
+		return msgSendClass;
 	}
 	
-	/**
-	 * loadAppointments
-	 * 
-	 * @param patientId
-	 * @return
-	 */
-	@RequestMapping(value = "/empty", method = { RequestMethod.GET, RequestMethod.POST })
-	public Result emptyAppointment() {
-		AppointmentDTO appointment = new AppointmentDTO();
-		appointment.setAppointment(new Appointment()); //
-		appointment.setCalendar(new Calendar());
-		appointment.setPractitioner(new Practitioner());
-		appointment.setTimeslot(new Timeslot());
-		appointment.setTimeslotDef(new TimeslotDef());
-		appointment.setRequestedFollowup(new RequestedFollowupDTO());
-		
-		RequestedFollowupDTO requestedFollowupDTO = appointment.getRequestedFollowup();
-		requestedFollowupDTO.setCarePlan(new CarePlan());
-		requestedFollowupDTO.setEncounter(new Encounter());
-		requestedFollowupDTO.setOrder(new Order());
-		requestedFollowupDTO.setPractitioner(new Practitioner());
-		requestedFollowupDTO.setRequestedFollowup(new RequestedFollowup());
-		requestedFollowupDTO.setPatient(new PatientDTO());
-		
-		PatientDTO patientDTO = requestedFollowupDTO.getPatient();
-		patientDTO.setIdCard(new Identity());
-		patientDTO.setSocialSecurity(new Identity());
-		patientDTO.setPatient(new Patient());
-		patientDTO.setFirstContactPerson(new ContactPersonDTO());
-		patientDTO.setSecondContactPerson(new ContactPersonDTO());
-		
-		patientDTO.getFirstContactPerson().setContact(new Contact());
-		patientDTO.getFirstContactPerson().setContactPerson(new ContactPerson());
-		patientDTO.getSecondContactPerson().setContact(new Contact());
-		patientDTO.getSecondContactPerson().setContactPerson(new ContactPerson());
-		
-		return new EntityResult().setItems(appointment);
+	public void setMsgSendClass(String msgSendClass) {
+		this.msgSendClass = msgSendClass;
 	}
 	
-	/**
-	 * loadAppointments
-	 * 
-	 * @param patientId
-	 * @return
-	 */
-	@RequestMapping(value = "/{patientId}", method = { RequestMethod.GET, RequestMethod.POST })
-	public Result loadAppointments(@PathVariable Long patientId) {
-		return loadAppointments(patientId, null, null);
+	public String getMsgSendMethod() {
+		return msgSendMethod;
 	}
 	
-	/**
-	 * loadAppointments
-	 * 
-	 * @param patientId
-	 * @param followupId
-	 * @return
-	 */
-	@RequestMapping(value = "/{patientId}/{followupId}", method = { RequestMethod.GET, RequestMethod.POST })
-	public Result loadAppointments(@PathVariable Long patientId, @PathVariable Long followupId) {
-		return loadAppointments(patientId, followupId, null);
+	public void setMsgSendMethod(String msgSendMethod) {
+		this.msgSendMethod = msgSendMethod;
 	}
 	
-	/**
-	 * loadAppointments
-	 * 
-	 * @param patientId
-	 * @param followupId
-	 * @param appointmentId
-	 * @return
-	 */
-	@RequestMapping(value = "/{patientId}/{followupId}/{appointmentId}", method = { RequestMethod.GET, RequestMethod.POST })
-	public Result loadAppointments(@PathVariable Long patientId, @PathVariable Long followupId, @PathVariable Long appointmentId) {
-		ListResult listResult = new ListResult();
-		try {
-			List<AppointmentDTO> appointments = appointmentService.findAppointmentList(patientId, followupId, appointmentId);
-			listResult.setItems(appointments);
-		} catch (Exception e) { // TODO TBR using general handler
-			logger.info(e);
-			listResult.setCode(3);
-			listResult.setMessage(e.getMessage());
-		}
-		return listResult;
+	public String getMsgSendDir() {
+		return msgSendDir;
 	}
 	
-	/**
-	 * saveAppointment
-	 * 
-	 * @param appointments
-	 * @return
-	 * @throws Exception
-	 */
-	@RequestMapping(method = RequestMethod.POST)
-	@Permission("scheduler_manage_followup")
-	public Result saveAppointments(@RequestBody List<AppointmentDTO> appointments) throws Exception {
-		ListResult result = new ListResult();
-		try {
-			List<Long> idList = appointmentService.createAppointment(appointments);
-			result.setItems(idList);
-		} catch (TimeslotOverCapacityException e) { // TODO TBR using general handler
-			logger.info(e);
-			// TODO
-			result.setCode(e.getCode());
-			result.setMessage(e.getMessage());
-		} catch (BusinessException e) {// TODO TBR using general handler
-			logger.info(e);
-			result.setCode(1);
-			result.setMessage(extractExceptionMessage(e));
-		} catch (Exception e) { // TODO TBR using general handler
-			logger.info(e);
-			result.setCode(-1);
-			result.setMessage(e.getMessage());
-		}
-		return result;
+	public void setMsgSendDir(String msgSendDir) {
+		this.msgSendDir = msgSendDir;
 	}
 	
-	/**
-	 * updateAppointment
-	 * 
-	 * @param followupAppointmentDTO
-	 * @return
-	 */
-	@RequestMapping(method = RequestMethod.PUT)
-	@Permission("scheduler_manage_followup")
-	public Result updateAppointment(@RequestBody AppointmentDTO appointment) {
-		ListResult result = new ListResult();
-		try {
-			Long appointmentId = appointmentService.saveOrUpdateAppointment(appointment);
-			List<Long> idList = new ArrayList<>();
-			idList.add(appointmentId);
-			result.setItems(idList);
-		} catch (TimeslotOverCapacityException e) {// TODO TBR using general handler
-			logger.info(e);
-			// TODO
-			result.setCode(302);
-		} catch (BusinessException e) {// TODO TBR using general handler
-			logger.info(e);
-			result.setCode(1);
-			result.setMessage(extractExceptionMessage(e));
-		} catch (Exception e) { // TODO TBR using general handler
-			logger.info(e);
-			result.setCode(-1);
-			result.setMessage(e.getMessage());
-		}
-		return result;
+	public String getMsgScanDir() {
+		return msgScanDir;
 	}
 	
-	/**
-	 * update appointment status
-	 * 
-	 * @param pRequestMap
-	 * @return
-	 */
-	@RequestMapping(value = "/status/{appointmentId}", method = RequestMethod.PUT)
-	@Permission("scheduler_manage_followup")
-	public Result updateAppointmentStatus(@PathVariable("appointmentId") Long appointmentId, @RequestBody Map<String, String> requestParams) {
-		Result result = new Result();
-		String status = requestParams.get("status");
-		
-		if (StringUtils.isBlank(status)) {
-			throw new LackParameterException("status is not found.");
-		}
-		
-		try {
-			appointmentService.updateAppointmentStatus(appointmentId, status);
-		} catch (LackParameterException e) {
-			logger.info(e); // TODO
-			result.setCode(999);
-		} catch (Exception e) { // TODO TBR using general handler
-			logger.info(e);
-			result.setCode(-1);
-			result.setMessage(e.getMessage());
-		}
-		return result;
+	public void setMsgScanDir(String msgScanDir) {
+		this.msgScanDir = msgScanDir;
 	}
 	
-	/**
-	 * getPdfReport
-	 * 
-	 * 
-	 * @param printSerialNumber
-	 *            used to mark print file name, it can be time like: 20151012091130
-	 * @param appointmentIdArray
-	 * @param locale
-	 * @return
-	 * @throws IOException
-	 * @throws JRException
-	 */
-	@RequestMapping(value = "/print/{printSerialNumber}", method = { RequestMethod.GET, RequestMethod.POST }, produces = "application/pdf;charset=utf-8")
-	@Permission("scheduler_print_followup_app")
-	public byte[] getPdfReport(@PathVariable("printSerialNumber") String printSerialNumber, @RequestParam("appointmentId") Long[] appointmentIdArray,
-			Locale locale) throws IOException, JRException {
-		Map<String, Object> parameters = new HashMap<String, Object>();
-		// Environment Parameters
-		parameters.put(JasperReportService.JSON_LOCALE, locale);
-		parameters.put(JasperReportService.REPORT_LOCALE, locale);
-		// Business Parameters
-		parameters.put(ReportDataService.KEY_DATA_ITEM_OID, appointmentIdArray);
-		String module = "appointment";
-		return jasperReportService.getPdfReport(module, parameters);
+	public String getMsgStorePath() {
+		return msgStorePath;
 	}
 	
-	/**
-	 * printMyList
-	 * 
-	 * @param gridName
-	 * @param printSerialNumber
-	 * @param dynamicSearchCriteria
-	 * @param locale
-	 * @return
-	 * @throws IOException
-	 * @throws JRException
-	 * @throws ParseException
-	 */
-	@RequestMapping(value = "/printmylist/{printSerialNumber}", method = { RequestMethod.GET, RequestMethod.POST }, produces = "application/pdf;charset=utf-8")
-	@Permission("scheduler_print_followup_app_list")
-	public byte[] printMyList(@PathVariable("printSerialNumber") String printSerialNumber, @RequestParam("searchType") String searchType,
-			@RequestParam(value = "searchName", required = false) String searchName, @RequestParam(value = "junction", required = false) String junction,
-			@RequestParam("search") String search, @RequestParam("searchDisplay") String searchDisplay, @RequestParam("sort") String sort, Locale locale)
-			throws IOException, JRException, ParseException {
-		Map<String, Object> parameters = new HashMap<String, Object>();
-		
-		// Environment Parameters
-		parameters.put(JasperReportService.JSON_LOCALE, locale);
-		parameters.put(JasperReportService.REPORT_LOCALE, locale);
-		
-		// Business Parameters
-		parameters.put("searchType", searchType);
-		parameters.put("searchName", searchName);
-		parameters.put("searchDisplay", searchDisplay);
-		
-		// set dynamicSearchCriteria
-		DynamicSearchCriteria dynamicSearchCriteria = new DynamicSearchCriteria();
-		dynamicSearchCriteria.setJunction(junction);
-		dynamicSearchCriteria.setSearch(search);
-		dynamicSearchCriteria.setSort(sort);
-		parameters.put(ReportDataService.KEY_DATA_ITEM_OID, dynamicSearchCriteria);
-		
-		// module
-		String module = "appointmentList";
-		
-		// get pdf report
-		byte[] result = jasperReportService.getPdfReport(module, parameters);
-		
-		return result;
+	public void setMsgStorePath(String msgStorePath) {
+		this.msgStorePath = msgStorePath;
 	}
 	
-	/**
-	 * queryPatientView
-	 * 
-	 * @param patient
-	 * @return
-	 * @throws IOException
-	 */
-	@RequestMapping(value = "/query/paitentsync", method = RequestMethod.POST)
-	public Result queryPatientView(@RequestBody PatientView patientView) throws IOException {
-		// call service
-		List<PatientView> patientViewList = patientService.fetchPatientViewList(patientView);
-		
-		// generate result object
-		return new ListResult().setNumRows(patientViewList.size()).setItems(patientViewList);
+	public int getMsgStoreDays() {
+		return msgStoreDays;
 	}
 	
-	/**
-	 * queryEncounterView
-	 * 
-	 * @param encounter
-	 * @return
-	 * @throws IOException
-	 */
-	@RequestMapping(value = "/query/encountersync", method = RequestMethod.POST)
-	public Result queryEncounterView(@RequestBody PatientView patientView) throws IOException {
-		// call service
-		List<EncounterView> encounterViewList = encounterService.fetchEncounterViewList(patientView);
-		
-		// generate result object
-		return new ListResult().setNumRows(encounterViewList.size()).setItems(encounterViewList);
+	public void setMsgStoreDays(int msgStoreDays) {
+		this.msgStoreDays = msgStoreDays;
 	}
 	
-	/**
-	 * getRecommendPractitioner
-	 * 
-	 * @param carePlanId
-	 * @return
-	 * @throws IOException
-	 */
-	@RequestMapping(value = "/practitioner/careplan/{carePlanId}", method = { RequestMethod.GET, RequestMethod.POST })
-	public Result getRecommendPractitioner(@PathVariable Long carePlanId) throws IOException {
-		// call service
-		Long practitionerId = appointmentService.getRecommendPractitioner(carePlanId);
-		
-		// generate result object
-		return new EntityResult().setItems(practitionerId);
+	public MessageType getMsgType() {
+		return msgType;
+	}
+	
+	public void setMsgType(MessageType msgType) {
+		this.msgType = msgType;
+	}
+	
+	public int getRetryDelay() {
+		return retryDelay;
+	}
+	
+	public void setRetryDelay(int retryDelay) {
+		this.retryDelay = retryDelay;
+	}
+	
+	public int getRetryTimes() {
+		return retryTimes;
+	}
+	
+	public void setRetryTimes(int retryTimes) {
+		this.retryTimes = retryTimes;
+	}
+	
+	public int getRetryInterval() {
+		return retryInterval;
+	}
+	
+	public void setRetryInterval(int retryInterval) {
+		this.retryInterval = retryInterval;
+	}
+	
+	public boolean isAsync() {
+		return isAsync;
+	}
+	
+	public void setAsync(boolean isAsync) {
+		this.isAsync = isAsync;
+	}
+	
+	public boolean isBlock() {
+		return isBlock;
+	}
+	
+	public void setBlock(boolean isBlock) {
+		this.isBlock = isBlock;
+	}
+	
+	public String getMsgSendUrl() {
+		return msgSendUrl;
+	}
+	
+	public void setMsgSendUrl(String msgSendUrl) {
+		this.msgSendUrl = msgSendUrl;
+	}
+	
+	public CallbackType getCallbackType() {
+		return callbackType;
+	}
+	
+	public void setCallbackType(CallbackType callbackType) {
+		this.callbackType = callbackType;
+	}
+	
+	public String getCallbackUrl() {
+		return callbackUrl;
+	}
+	
+	public void setCallbackUrl(String callbackUrl) {
+		this.callbackUrl = callbackUrl;
+	}
+	
+	public String getCallbackHost() {
+		return callbackHost;
+	}
+	
+	public void setCallbackHost(String callbackHost) {
+		this.callbackHost = callbackHost;
+	}
+	
+	public String getCallbackPort() {
+		return callbackPort;
+	}
+	
+	public void setCallbackPort(String callbackPort) {
+		this.callbackPort = callbackPort;
+	}
+	
+	public String getCallbackContextPath() {
+		return callbackContextPath;
+	}
+	
+	public void setCallbackContextPath(String callbackContextPath) {
+		this.callbackContextPath = callbackContextPath;
+	}
+	
+	public String getCallbackServletPath() {
+		return callbackServletPath;
+	}
+	
+	public void setCallbackServletPath(String callbackServletPath) {
+		this.callbackServletPath = callbackServletPath;
+	}
+	
+	public String getCallbackService() {
+		return callbackService;
+	}
+	
+	public void setCallbackService(String callbackService) {
+		this.callbackService = callbackService;
+	}
+	
+	public String getCallbackClass() {
+		return callbackClass;
+	}
+	
+	public void setCallbackClass(String callbackClass) {
+		this.callbackClass = callbackClass;
+	}
+	
+	public String getCallbackUnmarshalClass() {
+		return callbackUnmarshalClass;
+	}
+	
+	public void setCallbackUnmarshalClass(String callbackUnmarshalClass) {
+		this.callbackUnmarshalClass = callbackUnmarshalClass;
+	}
+	
+	public String getCallbackMethod() {
+		return callbackMethod;
+	}
+	
+	public void setCallbackMethod(String callbackMethod) {
+		this.callbackMethod = callbackMethod;
+	}
+	
+	public String getCallbackBrokerUrl() {
+		return callbackBrokerUrl;
+	}
+	
+	public void setCallbackBrokerUrl(String callbackBrokerUrl) {
+		this.callbackBrokerUrl = callbackBrokerUrl;
 	}
 	
 }

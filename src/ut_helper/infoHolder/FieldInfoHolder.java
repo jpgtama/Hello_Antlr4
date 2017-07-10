@@ -32,6 +32,8 @@ public class FieldInfoHolder extends InfoHolder {
 	
 	private String name;
 	
+	private String stringRepresent;
+	
 	/**
 	 * get access
 	 * 
@@ -89,6 +91,25 @@ public class FieldInfoHolder extends InfoHolder {
 		this.name = name;
 	}
 	
+	/**
+	 * get stringRepresent
+	 * 
+	 * @return the stringRepresent
+	 */
+	public String getStringRepresent() {
+		return stringRepresent;
+	}
+	
+	/**
+	 * set stringRepresent
+	 * 
+	 * @param stringRepresent
+	 *            the stringRepresent to set
+	 */
+	public void setStringRepresent(String stringRepresent) {
+		this.stringRepresent = stringRepresent;
+	}
+	
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -96,7 +117,7 @@ public class FieldInfoHolder extends InfoHolder {
 	 */
 	@Override
 	public String toString() {
-		return "FieldInfoHolder [access=" + access + ", type=" + type + ", name=" + name + "]";
+		return "FieldInfoHolder [access=" + access + ", type=" + type + ", name=" + name + ", stringRepresent=" + stringRepresent + "]";
 	}
 	
 }

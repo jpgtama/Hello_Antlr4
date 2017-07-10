@@ -1,5 +1,8 @@
 package ut_helper.infoHolder;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MethodInfoHolder extends InfoHolder {
 	
 	private String access;
@@ -7,6 +10,10 @@ public class MethodInfoHolder extends InfoHolder {
 	private String returnType;
 	
 	private String name;
+	
+	private List<InfoHolder> methodBodyInfoHolders = new ArrayList<>();
+	
+	private String stringRepresent;
 	
 	/**
 	 * get access
@@ -65,6 +72,44 @@ public class MethodInfoHolder extends InfoHolder {
 		this.name = name;
 	}
 	
+	/**
+	 * get methodBodyInfoHolders
+	 * 
+	 * @return the methodBodyInfoHolders
+	 */
+	public List<InfoHolder> getMethodBodyInfoHolders() {
+		return methodBodyInfoHolders;
+	}
+	
+	/**
+	 * set methodBodyInfoHolders
+	 * 
+	 * @param methodBodyInfoHolders
+	 *            the methodBodyInfoHolders to set
+	 */
+	public void setMethodBodyInfoHolders(List<InfoHolder> methodBodyInfoHolders) {
+		this.methodBodyInfoHolders = methodBodyInfoHolders;
+	}
+	
+	/**
+	 * get stringRepresent
+	 * 
+	 * @return the stringRepresent
+	 */
+	public String getStringRepresent() {
+		return stringRepresent;
+	}
+	
+	/**
+	 * set stringRepresent
+	 * 
+	 * @param stringRepresent
+	 *            the stringRepresent to set
+	 */
+	public void setStringRepresent(String stringRepresent) {
+		this.stringRepresent = stringRepresent;
+	}
+	
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -72,7 +117,8 @@ public class MethodInfoHolder extends InfoHolder {
 	 */
 	@Override
 	public String toString() {
-		return "MethodInfoHolder [access=" + access + ", returnType=" + returnType + ", name=" + name + "]";
+		return "MethodInfoHolder [access=" + access + ", returnType=" + returnType + ", name=" + name + ", methodBodyInfoHolders=" + methodBodyInfoHolders
+				+ ", stringRepresent=" + stringRepresent + "]";
 	}
 	
 }
